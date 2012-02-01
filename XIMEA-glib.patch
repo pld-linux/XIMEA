@@ -1,0 +1,20 @@
+--- XIMEA-1.04/examples/vaViewer/main.cpp.orig	2011-11-29 22:53:23.000000000 +0100
++++ XIMEA-1.04/examples/vaViewer/main.cpp	2012-02-01 18:36:06.409815747 +0100
+@@ -390,7 +390,7 @@
+ 			return TRUE;
+ 		}
+ 		startLive();
+-		g_signal_handlers_block_matched(ctrl->mode, G_SIGNAL_MATCH_FUNC, 0, 0, 0, G_CALLBACK(update_mode),0);
++		g_signal_handlers_block_matched(ctrl->mode, G_SIGNAL_MATCH_FUNC, 0, 0, 0, (gpointer)(update_mode),0);
+ 		while(gtk_combo_box_get_active_text(GTK_COMBO_BOX(ctrl->mode))) {
+ 			gtk_combo_box_remove_text(GTK_COMBO_BOX(ctrl->mode), 0);
+ 			gtk_combo_box_set_active(GTK_COMBO_BOX(ctrl->mode), 0);
+@@ -402,7 +402,7 @@
+ 			gtk_combo_box_append_text(GTK_COMBO_BOX(ctrl->mode), szMode);
+ 		}
+ 		gtk_combo_box_set_active(GTK_COMBO_BOX(ctrl->mode), 0);
+-		g_signal_handlers_unblock_matched(ctrl->mode, G_SIGNAL_MATCH_FUNC, 0, 0, 0, G_CALLBACK(update_mode),0);
++		g_signal_handlers_unblock_matched(ctrl->mode, G_SIGNAL_MATCH_FUNC, 0, 0, 0, (gpointer)(update_mode),0);
+ 	} else {
+ 		stopLive();
+ 	}
