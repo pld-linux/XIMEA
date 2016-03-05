@@ -1,41 +1,37 @@
 # TODO: build kernel module (src/currera_acq_module)
 #
-# Conditional build:
-%bcond_without	opencl	# OpenCL support in vaViewer
-#
 Summary:	XIMEA API Software Package for Linux
 Summary(pl.UTF-8):	Pakiet XIMEA API dla Linuksa
 Name:		XIMEA
 # see version_LINUX_SP.txt
-Version:	4.01.09
+Version:	4.07.13
 Release:	1
 # some mix of binaries and sources with no licensing information (except for GPL kernel module)
 License:	unknown
 Group:		Libraries
-Source0:	http://www.ximea.com/support/attachments/271/XIMEA_Linux_SP.tgz
-# NoSource0-md5:	fe4a4f4ec44a46da5f4fcd643b70cf46
+Source0:	https://www.ximea.com/support/attachments/271/XIMEA_Linux_SP.tgz
+# NoSource0-md5:	b60f28842bf3e5fb94c5f43c84bb7027
 NoSource:	0
-Patch0:		%{name}-va.patch
 URL:		http://www.ximea.com/support/wiki/apis/XIMEA_Linux_Software_Package
-%{?with_opencl:BuildRequires:	OpenCL-devel}
 BuildRequires:	gstreamer0.10-devel
 BuildRequires:	gstreamer0.10-plugins-base-devel
 BuildRequires:	gtk+2-devel
 BuildRequires:	libstdc++-devel
-BuildRequires:	libva-devel
 BuildRequires:	pkgconfig
 BuildRequires:	xorg-lib-libX11-devel
 Requires:	libraw1394 >= 2.1.0
 Requires:	libusb >= 1.0.9
-ExclusiveArch:	%{ix86} %{x8664}
+ExclusiveArch:	%{ix86} %{x8664} arm
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %ifarch	%{ix86}
 %define	abi	X32
-%else
+%endif
 %ifarch %{x8664}
 %define	abi	X64
 %endif
+%ifarch %{arm}
+%define	abi	Xarm
 %endif
 
 %description
@@ -44,7 +40,7 @@ XIMEA Linux Software Package contains of
  * xiAPI
  * Examples:
    * xiSample - sample showing basic image acquisition in xiAPI
-   * vaViewer - camera live image viewer for picture check
+   * streamViewer - camera live image viewer for picture check
 
 %description -l pl.UTF-8
 Pakiet XIMEA Linux Software Package składa się z:
@@ -53,7 +49,7 @@ Pakiet XIMEA Linux Software Package składa się z:
  - przykładów:
    - xiSample - przykładu pokazującego proste ściąganie obrazu przy
      użyciu xiAPI
-   - vaViewer - podgląd kamery na żywo
+   - streamViewer - podgląd kamery na żywo
 
 %package devel
 Summary:	Header files for xiAPI library
@@ -68,22 +64,22 @@ Header files for xiAPI library.
 Pliki nagłówkowe biblioteki xiAPI.
 
 %package viewer
-Summary:	XIMEA vaViewer utility
-Summary(pl.UTF-8):	Narzędzie vaViewer dla urządzeń XIMEA
+Summary:	XIMEA streamViewer utility
+Summary(pl.UTF-8):	Narzędzie streamViewer dla urządzeń XIMEA
 Group:		X11/Applications/Graphics
 Requires:	%{name}-devel = %{version}-%{release}
 
 %description viewer
-XIMEA vaViewer utility.
+XIMEA streamViewer utility.
 
 %description viewer -l pl.UTF-8
-Narzędzie vaViewer dla urządzeń XIMEA.
+Narzędzie streamViewer dla urządzeń XIMEA.
 
 %prep
 %setup -q -c
-%patch0 -p1
 
 ln -s ../../include package/examples/streamViewer/m3api
+ln -s libm3api.so.2 package/api/%{abi}/libm3api.so
 
 %build
 cd package
@@ -95,24 +91,20 @@ cd package
 	$(pkg-config --libs gtk+-2.0 gstreamer-0.10 gstreamer-app-0.10 gstreamer-interfaces-0.10) \
 	-Lapi/%{abi} -lm3api
 
-%{__make} -C examples/vaViewer acquisition.o main.o \
-	CXX="%{__cxx}" \
-	CFLAGS="%{rpmcxxflags} %{rpmcppflags} %{?with_opencl:-DOPENCL}"
-%{__cxx} %{rpmldflags} %{rpmcxxflags} -o examples/vaViewer/vaViewer \
-	examples/vaViewer/*.o \
-	$(pkg-config --libs libva libva-x11 gtk+-2.0) %{?with_opencl:-lOpenCL} -lX11 -lpthread \
-	-Lapi/%{abi} -lm3api
-
 %install
 rm -rf $RPM_BUILD_ROOT
 install -d $RPM_BUILD_ROOT{%{_libdir},%{_bindir},%{_includedir}/ximea}
 
 cd package
 cp -p include/*.h $RPM_BUILD_ROOT%{_includedir}/ximea
-install api/%{abi}/libm3api.so $RPM_BUILD_ROOT%{_libdir}
-install libs/gentl/%{abi}/libXIMEA_GenTL.so $RPM_BUILD_ROOT%{_libdir}
+install api/%{abi}/libm3api.so.0 $RPM_BUILD_ROOT%{_libdir}/libm3api.so.0.0.0
+install api/%{abi}/libm3api.so.2 $RPM_BUILD_ROOT%{_libdir}/libm3api.so.2.0.0
+ln -sf libm3api.so.0.0.0 $RPM_BUILD_ROOT%{_libdir}/libm3api.so.0
+ln -sf libm3api.so.2.0.0 $RPM_BUILD_ROOT%{_libdir}/libm3api.so.2
+ln -sf libm3api.so.2.0.0 $RPM_BUILD_ROOT%{_libdir}/libm3api.so
+install libs/gentl/%{abi}/libXIMEA_GenTL.cti.* $RPM_BUILD_ROOT%{_libdir}
+ln -sf libXIMEA_GenTL.cti.2 $RPM_BUILD_ROOT%{_libdir}/libXIMEA_GenTL.cti
 install examples/streamViewer/streamViewer $RPM_BUILD_ROOT%{_bindir}
-install examples/vaViewer/vaViewer $RPM_BUILD_ROOT%{_bindir}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -123,14 +115,19 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(644,root,root,755)
 %doc package/README
-%attr(755,root,root) %{_libdir}/libXIMEA_GenTL.so
-%attr(755,root,root) %{_libdir}/libm3api.so
+%attr(755,root,root) %{_libdir}/libXIMEA_GenTL.cti.0
+%attr(755,root,root) %{_libdir}/libXIMEA_GenTL.cti.2
+%attr(755,root,root) %{_libdir}/libXIMEA_GenTL.cti
+%attr(755,root,root) %{_libdir}/libm3api.so.0.*.*
+%attr(755,root,root) %ghost %{_libdir}/libm3api.so.0
+%attr(755,root,root) %{_libdir}/libm3api.so.2.*.*
+%attr(755,root,root) %ghost %{_libdir}/libm3api.so.2
 
 %files devel
 %defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/libm3api.so
 %{_includedir}/ximea
 
 %files viewer
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_bindir}/streamViewer
-%attr(755,root,root) %{_bindir}/vaViewer
